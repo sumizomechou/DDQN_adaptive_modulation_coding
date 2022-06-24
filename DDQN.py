@@ -37,7 +37,6 @@ class DoubleDQN:
         self.epsilon_decay = 0.99
         # min epsilon of ε-greedy.
         self.epsilon_min = 0.05
-        self.BERWeight = np.array([2, 2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 2]).reshape(-1, 1)
 
     def load(self):  # 没啥卵用
         if os.path.exists('data/ddqn.h5'):
@@ -92,7 +91,7 @@ class DoubleDQN:
             errorTemp = 100  # 若存在满足条件的BER_old，errorTemp会被修改，反之不变
             # 从self.BER_memory中选出最接近predictBER的BER_old，返回其索引作为BER_index
             for BER_old in self.BER_memory:
-                total_error = np.linalg.norm(np.abs(BER_old - predictBER).reshape(-1, 1)*self.BERWeight, ord=1)
+                total_error = np.linalg.norm(np.abs(BER_old - predictBER).reshape(-1, 1), ord=1)
 
                 if total_error <= 0.5:  # 调整total_error可以改变总的分类数
 
