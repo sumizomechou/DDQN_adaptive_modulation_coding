@@ -25,6 +25,7 @@ class DoubleDQN:
         self.model = self.build_model()
         self.target_model = self.build_model()
         self.update_target_model()
+        # BER_Predict_model.h5使用导频估计BER(低SNR)，用于之后的基于BER的信道分类
         self.BER_predict_model = load_model('data/BER_Predict_model.h5')
         # experience replay.
         self.memory_buffer = deque(maxlen=5000)
@@ -38,7 +39,7 @@ class DoubleDQN:
         self.epsilon_min = 0.05
         self.BERWeight = np.array([2, 2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 2]).reshape(-1, 1)
 
-    def load(self):
+    def load(self):  # 没啥卵用
         if os.path.exists('data/ddqn.h5'):
             print('接续训练：')
             self.model = load_model('data/ddqn.h5')
@@ -47,7 +48,7 @@ class DoubleDQN:
             with open('data/BER_memory.bin', 'rb') as pickle_file:  # 读文件
                 self.BER_memory = pickle.load(pickle_file)
 
-    def save(self, TransmitData, EnergyData):
+    def save(self, TransmitData, EnergyData):  # 保存训练记录
         self.model.save('output/ddqn.h5')
         with open('output/BER_memory.bin', 'wb') as pickle_file:  # 写文件
             pickle.dump(self.BER_memory, pickle_file)
@@ -57,7 +58,7 @@ class DoubleDQN:
         scio.savemat('output/QTrainLog.mat',
                      {'QData': QData, 'QEnergy': QEnergy, 'QEnergyEfficiency': QEnergyEfficiency})
 
-    def reset(self, Pilot, Time, Data):
+    def reset(self, Pilot, Time, Data):  # 初始化每个回合的状态
         done = False
 
         # predict BER
@@ -71,32 +72,36 @@ class DoubleDQN:
         State = np.array([[BER_index, Time, Data]])
         return State, done
 
-    def predict_BER(self, Pilot):
-        # 组合模型输入数据
+    def predict_BER(self, Pilot):  # 估计BER向量
+        # 拼接模型输入数据：[调制阶数， 编码速率， 导频]
         pilotData = np.zeros([9, Pilot.shape[1] + 2])
         pilotData[:, 0] = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
         pilotData[:, 1] = np.array([1/3, 1/2, 2/3, 1/3, 1/2, 2/3, 1/3, 1/2, 2/3])
         pilotData[:, 2:] = Pilot
         # 预测
+        # 模型输出为预处理后的BER向量，预处理为BER_label = -1/(log10(BER));
         predictBER = self.BER_predict_model.predict_on_batch(pilotData)
+        # 将模型输出处理回BER形式的数据
         predictBER = 10 ** (-1 / predictBER)
         return predictBER
 
-    def get_BER_index(self, predictBER):
+    def get_BER_index(self, predictBER):  # 基于BER的信道分类
         if self.BER_memory:
             berIndex = 0
             bestBERIndex = 0
-            errorTemp = 100
+            errorTemp = 100  # 若存在满足条件的BER_old，errorTemp会被修改，反之不变
+            # 从self.BER_memory中选出最接近predictBER的BER_old，返回其索引作为BER_index
             for BER_old in self.BER_memory:
                 total_error = np.linalg.norm(np.abs(BER_old - predictBER).reshape(-1, 1)*self.BERWeight, ord=1)
 
-                if total_error <= 0.5:
+                if total_error <= 0.5:  # 调整total_error可以改变总的分类数
 
                     if total_error < errorTemp:
                         errorTemp = total_error
                         bestBERIndex = berIndex
                 berIndex += 1
-            if errorTemp == 100:  # 你有问题
+            if errorTemp == 100:
+                # 如果self.BER_memory中不存在满足条件的BER_old
                 self.BER_memory.append(predictBER)
                 return berIndex
             else:
@@ -125,7 +130,7 @@ class DoubleDQN:
         N_f = 10 * np.log10(10 ** (Nt_f / 10) + 10 ** (Ns_f / 10) + 10 ** (Nw_f / 10) + 10 ** (Nth_f / 10))     # 谱级
         N_f = N_f + 10 * np.log10(B * 1000)     # 噪声级
 
-        SNR = SNR - 24  # 14 42
+        SNR = SNR - 24  # 这里的SNR值是有问题的，先凑合用
         SL = SNR + A_lf + N_f  # 声源级
         Ph = 10 ** ((SL - 170.8 - 10 * np.log10(eta)) / 10)  # 换能器发射功率
         return Ph.item()
@@ -175,6 +180,8 @@ class DoubleDQN:
         self.target_model.set_weights(self.model.get_weights())
 
     def update_epsilon(self):
+        """update epsilon
+        """
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
@@ -202,7 +209,7 @@ class DoubleDQN:
             action: action
             reward: reward
             next_state: next_observation
-            done: if game done.
+            done: if episode done.
         """
         item = (state, action[0]*len(self.mod)*len(self.rate)+action[1]*len(self.rate)+action[2],
                 reward, next_state, done)
@@ -244,6 +251,9 @@ class DoubleDQN:
                 Ts = 0
                 DataTrans = 0  # 已传输的数据
                 RemEnergy = 0  # 已消耗的能量
+                # 第一次不传输数据，只用来获取信道状态，接下来15次传输数据
+                # 非对称信道，每个回合有1+15=16次传输，所以一个回合使用了16*2=32条信道
+                # 数据集为160*32=5120条信道
                 pilot = self.env.reset(episode)
                 state, done = self.reset(pilot, Ts, DataTrans)
                 # start episode
@@ -283,12 +293,12 @@ class DoubleDQN:
 
 if __name__ == '__main__':
     # os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    target_data = 20
-    time_limit = 15
+    target_data = 20  # 一个episode的目标吞吐量
+    time_limit = 15  # 每15次传输为一个episode
     QoS = 0.001
     snr = [60, 62, 64, 66, 68, 70, 72, 74]
     modulation = [1, 2, 3]
     code_rate = [1/3, 1/2, 2/3]
     fbSNR = 50
     model = DoubleDQN(target_data, time_limit, QoS, snr, modulation, code_rate, fbSNR)
-    model.train(30, 64)
+    model.train(30, 64)  # 将整个数据集训练30次
