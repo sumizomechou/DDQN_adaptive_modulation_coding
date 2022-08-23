@@ -18,6 +18,8 @@ class Env:
         self.rate = rate
         self.channelIndex = 1
         self.feedbackSNR = feedbackSNR
+        # 信道&CP&导频
+        self.channel, self.CP, self.pilot = self.load_simu_data()
 
     # def load_ber_table(self):
     #     dict_data = h5py.File('data/BER_table.mat', 'r')
@@ -28,20 +30,32 @@ class Env:
     #     BER_table50 = np.array(dict_data.get('BER_target'))
     #     BER_table50 = BER_table50.transpose()
     #     return BER_table, BER_table50
+    
+    def load_simu_data(self):
+        chan_dict_data = h5py.File('data/channel.mat', 'r')
+        channel = np.array(chan_dict_data.get('Qchannel')).transpose()
+        coef_dict_data = h5py.File('data/instant_conf.mat', 'r')
+        CP = np.array(coef_dict_data.get('CP')).transpose()
+        pilot = np.array(coef_dict_data.get('Pilot')).transpose()
+        return channel, CP, pilot
 
     def sendData(self, action):
+        # realBER = self.BER_table[action[0], (self.channelIndex-1), (action[1]*3+action[2])]
         realBER = self.eng.BER_generate_new(self.Len_block, self.nBlock,
                                             self.SNR[action[0]], self.mod[action[1]], self.rate[action[2]],
-                                            self.channelIndex)
+                                            matlab.double(self.channel[self.channelIndex-1, :].tolist()),
+                                            matlab.double(self.CP.tolist()),
+                                            matlab.double(self.pilot.tolist()))
         return realBER
 
     def getFeedbackPilot(self):
         # predict BER
-        feedbackPilot = self.eng.fadePilot(self.feedbackSNR, self.channelIndex)
+        feedbackPilot = self.eng.fadePilot(self.feedbackSNR,
+                                           matlab.double(self.channel[self.channelIndex-1, :].tolist()),
+                                           matlab.double(self.pilot.tolist()))
 
         # real BER
         # feedbackPilot = self.BER_table50[(self.channelIndex-1), :]
-
         return np.array(feedbackPilot)
 
     def reset(self, episode):
