@@ -33,9 +33,11 @@ class Env:
     
     def load_simu_data(self):
         chan_dict_data = h5py.File('data/channel.mat', 'r')
+        # 信道前半为实部，后半为虚部
         channel = np.array(chan_dict_data.get('Qchannel')).transpose()
         coef_dict_data = h5py.File('data/instant_conf.mat', 'r')
         CP = np.array(coef_dict_data.get('CP')).transpose()
+        # 导频前半为实部，后半为虚部
         pilot = np.array(coef_dict_data.get('Pilot')).transpose()
         return channel, CP, pilot
 
