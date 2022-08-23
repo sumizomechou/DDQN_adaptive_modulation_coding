@@ -3,22 +3,25 @@
 % 调制方式为 BPSK QPSK 8PSK
 % 通信体制为单载波频域均衡
 % 接收端首先假设信道已知
-function BER_target = BER_generate_new(Len_block, nblock, SNR, M, Rate_code, channelIndex)
+function BER_target = BER_generate_new(Len_block, nblock, SNR, M, Rate_code, channel, CP, pilot)
     Len_block = double(Len_block);
     nblock = double(nblock);
     M = double(M);
     SNR = double(SNR);
-    channelIndex = double(channelIndex);
-    load('data\instant_conf.mat', 'CP', 'Pilot')
-    load('data\channel.mat', 'Qchannel')
+    channel = double(channel);
+    CP = double(CP);
+    pilot = double(pilot);
 %     rng('default')
 %     rng(SNR)
-    chan = Qchannel(channelIndex, :);
-
-    chan_order=50;
+    % 前半为实部，后半为虚部
+    chan_order=length(channel)/2;
+    chan = channel(1:chan_order) + 1i*channel(chan_order+1:chan_order*2);
+    fprintf(['channel size: ', num2str(size(chan,1)), ': ', num2str(size(chan,2)), ' \n'])
+    Len_x = length(pilot)/2; % 导频长度1280
+    Pilot = pilot(1:Len_x) + 1i*pilot(Len_x+1:Len_x*2);
+	% fprintf(['Pilot size: ', num2str(size(Pilot,1)), ': ', num2str(size(Pilot,2)), ' \n'])
     N_cp =length(CP);   % cp的长度
     N_data = Len_block-N_cp;
-    Len_x = length(Pilot); % 1280
     PN_add=zeros(N_cp,nblock);
     for i=1:nblock
         PN_add(:,i)=CP.'; % CP:256x1,nblock个CP
