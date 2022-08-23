@@ -1,13 +1,15 @@
-function train_data = fadePilot(SNR, channelIndex)
+function train_data = fadePilot(SNR, channel, pilot)
     SNR = double(SNR);
-    channelIndex = double(channelIndex);
-    load('data\instant_conf.mat', 'Pilot')
-    load('data\channel.mat', 'Qchannel')
+    channel = double(channel);
+    pilot = double(pilot);
 %     load(['data\train_channels\tv_',num2str(channelIndex), '.mat'],'Qchannel')
 %     rng('default')
 %     rng(SNR)
-    chan = Qchannel(channelIndex, :);
-
+    chan_order=length(channel)/2;
+    chan = channel(1:chan_order) + 1i*channel(chan_order+1:chan_order*2);
+    
+    Len_x = length(pilot)/2;
+    Pilot = pilot(1:Len_x) + 1i*pilot(Len_x+1:Len_x*2);
     %% 噪声能量=0dB作为基准功率
     
     Pilot = Pilot.*(10^(SNR/20));
