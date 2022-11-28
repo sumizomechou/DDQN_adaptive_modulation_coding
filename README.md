@@ -1,5 +1,9 @@
 # DDQN_adaptive_modulation_coding  
-underwater communication adaptive modulation and coding based on double deep q network  
+Underwater communication adaptive modulation and coding based on double deep q network  
+食用方法：  
+Python 3.8  
+pip install keras==2.6.0 tensorflow==2.6.0 pandas==1.3.5 matplotlib scikit-learn  
+  
 在Python中调用Matlab方法参考 http://blog.csdn.net/sunny_xsc1994/article/details/79254196  
   
 非对称信道下的水声通信自适应调制  
