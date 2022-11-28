@@ -2,10 +2,11 @@
 Underwater communication adaptive modulation and coding based on double deep q network  
   
 食用方法：  
-cuda_11.1.0_456.43_win10  
-cudnn-11.2-windows-x64-v8.1.1.33  
 Python 3.8  
 pip install keras==2.6.0 tensorflow==2.6.0 pandas==1.3.5 matplotlib scikit-learn  
+(可选)  
+cuda_11.1.0_456.43_win10  
+cudnn-11.2-windows-x64-v8.1.1.33  
   
 在Python中调用Matlab方法参考 http://blog.csdn.net/sunny_xsc1994/article/details/79254196  
   
