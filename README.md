@@ -13,6 +13,6 @@ pip install keras==2.6.0 tensorflow==2.6.0 pandas==1.3.5 matplotlib scikit-learn
 以将 AMC 问题表述为马尔可夫决策过程 (MDP)，并使用了DDQN方法实现了接近最优的能量效率。  
 配置好各种包后直接运行DDQN.py即可  
   
-Reference:  
+Related Paper:  
 Website: https://www.mdpi.com/2072-4292/14/23/5959  
 PDF Version: https://www.mdpi.com/2072-4292/14/23/5959/pdf  
